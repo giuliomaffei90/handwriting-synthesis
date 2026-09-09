@@ -1,0 +1,65 @@
+"""Proves the numpy port matches the original TensorFlow graph.
+
+tests/reference.npz was produced by tools/tf_export.py running the restored
+TF1 graph on fixed inputs; here the same inputs go through hw.engine and every
+intermediate must agree. Run: python tests/test_engine.py
+"""
+import os
+import sys
+
+import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from hw import drawing  # noqa: E402
+from hw.engine import Model, STATE_FIELDS  # noqa: E402
+
+REFERENCE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'reference.npz')
+
+
+def test_matches_tensorflow():
+    ref = np.load(REFERENCE)
+    model = Model()
+    params, state = model.teacher_force(ref['x'], ref['x_len'], ref['c'], ref['c_len'])
+
+    err = np.abs(params - ref['params']).max()
+    scale = np.abs(ref['params']).max()
+    print('mdn params: shape {} max abs err {:.2e} (values up to {:.1f})'.format(
+        params.shape, err, scale))
+    assert err < 1e-3, 'mixture density outputs diverge from TensorFlow: {}'.format(err)
+
+    for field in STATE_FIELDS:
+        expected = ref['state_' + field]
+        err = np.abs(state[field] - expected).max()
+        print('  state.{:<6s} max abs err {:.2e}'.format(field, err))
+        assert err < 1e-3, 'state.{} diverges from TensorFlow: {}'.format(field, err)
+
+
+def test_savgol_matches_scipy():
+    try:
+        from scipy.signal import savgol_filter
+    except ImportError:
+        print('scipy not installed, skipping savgol cross-check')
+        return
+    rng = np.random.default_rng(0)
+    for n in (1, 2, 5, 7, 40):
+        x = rng.standard_normal(n)
+        err = np.abs(drawing.savgol(x) - savgol_filter(x, 7, 3, mode='nearest')).max()
+        assert err < 1e-9, 'savgol mismatch at n={}: {}'.format(n, err)
+    print('savgol matches scipy for n in (1, 2, 5, 7, 40)')
+
+
+def test_text_prep():
+    text, dropped = drawing.sanitize('Perché Qui: 3 “test” – ok ')
+    assert text == 'Perche qui: 3 "test" - ok', text
+    assert dropped == [' '], dropped
+    assert all(len(line) <= 75 for line in drawing.wrap('word ' * 100))
+    assert drawing.wrap('a\n\nb') == ['a', '', 'b']
+    print('text preparation ok')
+
+
+if __name__ == '__main__':
+    test_matches_tensorflow()
+    test_savgol_matches_scipy()
+    test_text_prep()
+    print('OK')

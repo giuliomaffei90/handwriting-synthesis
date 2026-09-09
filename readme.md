@@ -1,61 +1,91 @@
-![](img/banner.svg)
-# Handwriting Synthesis
-Implementation of the handwriting synthesis experiments in the paper <a href="https://arxiv.org/abs/1308.0850">Generating Sequences with Recurrent Neural Networks</a> by Alex Graves.  The implementation closely follows the original paper, with a few slight deviations, and the generated samples are of similar quality to those presented in the paper.
+# Handwriting
 
-Web demo is available <a href="https://seanvasquez.com/handwriting-generation/">here</a>.
+A macOS app that writes what you type in a human hand, and saves it as PNG or SVG.
+No terminal, no Python install, no TensorFlow.
 
-## Usage
-```python
-lines = [
-    "Now this is a story all about how",
-    "My life got flipped turned upside down",
-    "And I'd like to take a minute, just sit right there",
-    "I'll tell you how I became the prince of a town called Bel-Air",
-]
-biases = [.75 for i in lines]
-styles = [9 for i in lines]
-stroke_colors = ['red', 'green', 'black', 'blue']
-stroke_widths = [1, 2, 1, 2]
+![](docs/sample.png)
 
-hand = Hand()
-hand.write(
-    filename='img/usage_demo.svg',
-    lines=lines,
-    biases=biases,
-    styles=styles,
-    stroke_colors=stroke_colors,
-    stroke_widths=stroke_widths
-)
+This is a fork of [sjvasquez/handwriting-synthesis](https://github.com/sjvasquez/handwriting-synthesis),
+an implementation of the handwriting synthesis experiments in
+[Generating Sequences with Recurrent Neural Networks](https://arxiv.org/abs/1308.0850)
+by Alex Graves. The model and its pretrained weights are unchanged - what is new
+is everything around them: the network now runs on numpy, so it fits in a
+double-clickable app.
+
+## Download
+
+1. Get `Handwriting-macOS-arm64.zip` from [Releases](../../releases).
+2. Unzip and drag **Handwriting.app** into Applications.
+3. First launch only: the app is signed but not notarized by Apple, so macOS asks.
+   Right-click the app and choose **Open**, or go to
+   **System Settings → Privacy & Security** and press **Open Anyway**.
+
+Apple Silicon (M1 and later). No installation, no dependencies, works offline.
+
+## Using it
+
+- **Type** anything. Lines longer than 75 characters wrap on word boundaries,
+  blank lines become blank lines.
+- **Style** picks one of 13 real handwriting samples that prime the network.
+  The strip under the controls shows the actual sample.
+- **Neatness** is the sampling bias: low is loose and messy, high is careful.
+- **Pen** sets stroke width, and the swatch next to it sets the colour.
+- **Save PNG** (tick *Transparent* for a see-through background) or **Save SVG**
+  for infinitely scalable vectors you can edit in Illustrator or Figma.
+
+The network only knows 73 characters. Accents are stripped (`è` becomes `e`),
+a few symbols are substituted (`&` becomes `and`), uppercase `Q X Z` were never
+in the training set and become lowercase. Anything left over is listed under the
+text box instead of being silently dropped.
+
+![](docs/styles.png)
+
+## How it runs without TensorFlow
+
+The original needs TensorFlow 1.6, which has no Apple Silicon build - bundling it
+into an app is not an option. So the model was moved off it entirely:
+
+- **`tools/tf_export.py`** loads the frozen meta graph with TF2's `compat.v1` API
+  (no `tf.contrib`, no Python 2, no Rosetta) and dumps the ten weight tensors the
+  model actually uses into `hw/weights.npz` - 14 MB, down from a 43 MB checkpoint
+  that was mostly optimizer state.
+- **`hw/engine.py`** re-implements inference in numpy: three 400-unit LSTMs, the
+  Gaussian attention window over the character sequence, and the 20-component
+  mixture density output that gets sampled into pen movements.
+- **`hw/drawing.py`** drops scipy: the Savitzky-Golay smoother the original
+  imports is a fixed 7-tap kernel, so it is one convolution.
+
+**`tests/test_engine.py`** is what makes this trustworthy. It replays a
+deterministic trace captured from the original graph: after 738 recurrent steps
+the mixture density parameters agree to `7.6e-05` (on values up to 25), and every
+state tensor to `1e-05`. The sampling path was checked separately by running both
+implementations at a bias high enough to make sampling near-deterministic - same
+trajectory, identical pen-up flags on all 203 steps.
+
+The result is a 63 MB app that draws a line of text in about a second on CPU.
+
+## Building it yourself
+
+```bash
+uv venv --python 3.12 .venv
+VIRTUAL_ENV=.venv uv pip install numpy pillow pyinstaller
+./tools/build_app.sh          # -> dist/Handwriting.app
 ```
-![](img/usage_demo.svg)
 
-Currently, the `Hand` class must be imported from `demo.py`.  If someone would like to package this project to make it more usable, please [contribute](#contribute).
+Run it from source with `.venv/bin/python app.py`, and the tests with
+`.venv/bin/python tests/test_engine.py`.
 
-A pretrained model is included, but if you'd like to train your own, read <a href='https://github.com/sjvasquez/handwriting-synthesis/tree/master/data/raw'>these instructions</a>.
+`hw/weights.npz` is committed, so none of this needs TensorFlow. Regenerating it
+from `checkpoints/` does - `uv pip install "tensorflow>=2.16"`, then
+`python tools/tf_export.py`. `tools/make_icon.py` draws the app icon by asking
+the model to write "Aa", and `tools/make_samples.py` builds the images above.
 
-## Demonstrations
-Below are a few hundred samples from the model, including some samples demonstrating the effect of priming and biasing the model.  Loosely speaking, biasing controls the neatness of the samples and priming controls the style of the samples. The code for these demonstrations can be found in `demo.py`.
+## The original project
 
-### Demo #1:
-The following samples were generated with a fixed style and fixed bias.
-
-**Smash Mouth – All Star (<a href="https://www.azlyrics.com/lyrics/smashmouth/allstar.html">lyrics</a>)**
-![](img/all_star.svg)
-
-### Demo #2
-The following samples were generated with varying style and fixed bias.  Each verse is generated in a different style.
-
-**Vanessa Carlton – A Thousand Miles (<a href="https://www.azlyrics.com/lyrics/vanessacarlton/athousandmiles.html">lyrics</a>)**
-![](img/downtown.svg)
-
-### Demo #3
-The following samples were generated with a fixed style and varying bias.  Each verse has a lower bias than the previous, with the last verse being unbiased.
-
-**Leonard Cohen – Hallelujah (<a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">lyrics</a>)**
-![](img/give_up.svg)
-
-## Contribute
-This project was intended to serve as a reference implementation for a research paper, but since the results are of decent quality, it may be worthwile to make the project more broadly usable.  I plan to continue focusing on the machine learning side of things.  That said, I'd welcome contributors who can:
-
-  - Package this, and otherwise make it look more like a usable software project and less like research code.
-  - Add support for more sophisticated drawing, animations, or anything else in this direction.  Currently, the project only creates some simple svg files.
+The training pipeline is untouched and still needs TensorFlow 1.x:
+`prepare_data.py` for the IAM-OnDB data, `rnn.py` to train, `demo.py` for the
+scripted examples. See the
+[upstream README](https://github.com/sjvasquez/handwriting-synthesis/blob/master/readme.md)
+and its [web demo](https://seanvasquez.com/handwriting-generation/).
+All credit for the model, the training and the pretrained weights goes to
+[Sean Vasquez](https://github.com/sjvasquez).
