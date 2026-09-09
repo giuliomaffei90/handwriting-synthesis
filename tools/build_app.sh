@@ -4,6 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+VERSION="${VERSION:-1.0.0}"
+
 test -f hw/weights.npz || { echo "hw/weights.npz missing - run tools/tf_export.py first"; exit 1; }
 
 .venv/bin/pyinstaller --noconfirm --clean --windowed --name Handwriting \
@@ -15,7 +17,15 @@ test -f hw/weights.npz || { echo "hw/weights.npz missing - run tools/tf_export.p
   --exclude-module pandas --exclude-module sklearn \
   app.py
 
-# ad-hoc signature: required for arm64 binaries to run at all
+PLIST=dist/Handwriting.app/Contents/Info.plist
+for key in CFBundleShortVersionString CFBundleVersion; do
+  plutil -replace "$key" -string "$VERSION" "$PLIST" 2>/dev/null ||
+    plutil -insert "$key" -string "$VERSION" "$PLIST"
+done
+plutil -replace LSMinimumSystemVersion -string "11.0" "$PLIST" 2>/dev/null ||
+  plutil -insert LSMinimumSystemVersion -string "11.0" "$PLIST"
+
+# ad-hoc signature must come last: it seals the Info.plist above
 codesign --force --deep --sign - dist/Handwriting.app
 
 dist/Handwriting.app/Contents/MacOS/Handwriting --selftest
