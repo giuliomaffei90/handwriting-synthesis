@@ -19,14 +19,14 @@ def main():
 
     hero = model.generate(
         ['Handwriting, generated on a Mac', 'by a neural network from 2013,',
-         'running on numpy alone.'],
-        style=9, bias=0.85, seed=20240607)
+         'with no TensorFlow in sight.'],
+        style=9, bias=1.0, seed=20240607)
     polylines, size = render.layout(hero)
     render.to_image(polylines, size, stroke_width=1.9, dpi_scale=2.0).save(
         os.path.join(DOCS, 'sample.png'))
 
     styles = available_styles()
-    rows = [model.generate(['the quick brown fox jumps'], style=s, bias=0.85, seed=100 + s)[0]
+    rows = [model.generate(['the quick brown fox jumps'], style=s, bias=1.0, seed=100 + s)[0]
             for s in styles]
     polylines, size = render.layout(rows, line_height=64)
     sheet = render.to_image(polylines, size, stroke_width=1.9, dpi_scale=2.0)

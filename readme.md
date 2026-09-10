@@ -28,10 +28,16 @@ Apple Silicon (M1 and later). No installation, no dependencies, works offline.
   blank lines become blank lines.
 - **Style** picks one of 13 real handwriting samples that prime the network.
   The strip under the controls shows the actual sample.
-- **Neatness** is the sampling bias: low is loose and messy, high is careful.
+- **Neatness** steadies the hand. It is the network's sampling bias: at 0.3 the
+  writing wanders and scrawls, at 2.0 it writes carefully. The default, 1.0, is
+  legible but still looks handwritten.
 - **Pen** sets stroke width, and the swatch next to it sets the colour.
-- **Save PNG** (tick *Transparent* for a see-through background) or **Save SVG**
-  for infinitely scalable vectors you can edit in Illustrator or Figma.
+- **Save PNG** or **Save SVG**. Both are saved with a transparent background, so
+  handwriting drops straight onto a document, and the SVG scales forever and
+  opens in Illustrator or Figma.
+
+The preview goes through the same renderer that writes the file, so what is on
+screen is what gets saved.
 
 The network only knows 73 characters. Accents are stripped (`è` becomes `e`),
 a few symbols are substituted (`&` becomes `and`), uppercase `Q X Z` were never
@@ -54,6 +60,11 @@ into an app is not an option. So the model was moved off it entirely:
   mixture density output that gets sampled into pen movements.
 - **`hw/drawing.py`** drops scipy: the Savitzky-Golay smoother the original
   imports is a fixed 7-tap kernel, so it is one convolution.
+- **`hw/render.py`** rounds the corners of the pen path with quadratic Beziers -
+  the network emits points about a unit apart, which show as facets when
+  enlarged - and stamps the pen as overlapping dots instead of drawing a thick
+  polyline, because PIL's wide lines leave serrated edges at every vertex of a
+  hand-drawn path. The PNG comes out indistinguishable from the SVG.
 
 **`tests/test_engine.py`** is what makes this trustworthy. It replays a
 deterministic trace captured from the original graph: after 738 recurrent steps
