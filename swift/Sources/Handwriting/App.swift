@@ -5,7 +5,7 @@ struct HandwritingApp: App {
         WindowGroup("Handwriting") {
             ContentView()
         }
-        .defaultSize(width: 820, height: 660)
+        .defaultSize(width: 1100, height: 760)
         .windowResizability(.contentMinSize)
         .commands { CommandGroup(replacing: .newItem) { } }
     }

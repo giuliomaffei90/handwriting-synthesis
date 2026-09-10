@@ -5,28 +5,21 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            TextEditor(text: $composer.text)
-                .font(.system(size: 14))
-                .scrollContentBackground(.hidden)
-                .padding(8)
-                .frame(minHeight: 64, maxHeight: 104)
-                .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.5)))
-
-            if !composer.notice.isEmpty {
-                Label(composer.notice, systemImage: "exclamationmark.triangle")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
             controls
             hint
             sample
-            preview
+
+            // what you type and what it becomes, side by side like two pages
+            HStack(spacing: 14) {
+                editor
+                preview
+            }
+            .frame(maxHeight: .infinity)
+
             actions
         }
         .padding(18)
-        .frame(minWidth: 640, minHeight: 560)
+        .frame(minWidth: 760, minHeight: 600)
         .onAppear { composer.load() }
         .alert("Something went wrong", isPresented: .constant(composer.failure != nil)) {
             Button("OK") { }
@@ -61,7 +54,7 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// The real handwriting the chosen style shows the model before it writes.
+    /// The same sentence, written in the chosen style.
     private var sample: some View {
         PageView(page: composer.samplePage, ink: .secondary, penWidth: 2.4, maximumZoom: 1,
                  padding: 4)
@@ -76,9 +69,28 @@ struct ContentView: View {
             }
     }
 
+    private var editor: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            TextEditor(text: $composer.text)
+                .font(.system(size: 14))
+                .scrollContentBackground(.hidden)
+                .padding(10)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(RoundedRectangle(cornerRadius: 10).fill(.quaternary.opacity(0.5)))
+
+            if !composer.notice.isEmpty {
+                Label(composer.notice, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// A sheet of paper: the writing starts at the top left, as a letter would.
     private var preview: some View {
         PageView(page: composer.page, ink: composer.ink, penWidth: composer.penWidth,
-                 maximumZoom: 2)
+                 maximumZoom: 2, padding: 14, anchor: .topLeading)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(RoundedRectangle(cornerRadius: 10).fill(.white))
             .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.quaternary))
@@ -135,6 +147,8 @@ struct PageView: View {
     let penWidth: Double
     let maximumZoom: Double
     var padding: CGFloat = 8
+    /// Where the page sits when it is smaller than the view.
+    var anchor: UnitPoint = .center
 
     var body: some View {
         Canvas { context, size in
@@ -142,8 +156,9 @@ struct PageView: View {
             let zoom = min((size.width - 2 * padding) / page.size.width,
                            (size.height - 2 * padding) / page.size.height,
                            maximumZoom)
-            context.translateBy(x: (size.width - page.size.width * zoom) / 2,
-                                y: (size.height - page.size.height * zoom) / 2)
+            let spareX = size.width - 2 * padding - page.size.width * zoom
+            let spareY = size.height - 2 * padding - page.size.height * zoom
+            context.translateBy(x: padding + spareX * anchor.x, y: padding + spareY * anchor.y)
             context.scaleBy(x: zoom, y: zoom)
             let stroke = StrokeStyle(lineWidth: penWidth, lineCap: .round, lineJoin: .round)
             for line in page.strokes {
