@@ -57,6 +57,7 @@ def main():
 
     styles = []
     for s in engine.available_styles():
+        styles.append(('style{}.name'.format(s), engine.style_name(s)))
         styles.append(('style{}.text'.format(s), engine.style_text(s)))
         styles.append(('style{}.strokes'.format(s), engine.style_strokes(s)))
         key = 'style{}'.format(s)

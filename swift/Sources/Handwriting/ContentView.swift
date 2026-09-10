@@ -38,9 +38,9 @@ struct ContentView: View {
     private var controls: some View {
         HStack(spacing: 22) {
             Picker("Style", selection: $composer.styleID) {
-                ForEach(composer.styleIDs, id: \.self) { Text("\($0)").tag($0) }
+                ForEach(composer.styles, id: \.id) { Text($0.name).tag($0.id) }
             }
-            .frame(width: 116)
+            .frame(width: 190)
             .onChange(of: composer.styleID) { _ in composer.showSample() }
 
             LabelledSlider(title: "Neatness", value: $composer.neatness,

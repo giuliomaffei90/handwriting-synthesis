@@ -27,10 +27,11 @@ Apple Silicon, macOS 13 or later.
 
 - **Type** anything. Lines longer than 75 characters wrap on word boundaries,
   blank lines become blank lines.
-- **Style** picks one of 25 hands. The strip under the controls shows that hand
-  writing the same sentence as every other, so the styles can be compared -
-  generated ahead of time and shipped with the app, because writing it takes
-  about a second and nobody wants to wait while flipping through styles.
+- **Style** picks one of 24 named hands - Notebook, Copperplate, Spidery and so
+  on. The strip under the controls shows that hand writing the same sentence as
+  every other, so the styles can be compared - generated ahead of time and
+  shipped with the app, because writing it takes about a second and nobody wants
+  to wait while flipping through styles.
 - **Neatness** steadies the hand. It is the network's sampling bias: at 0.3 the
   writing wanders and scrawls, at 2.0 it writes carefully. The default, 1.0, is
   legible but still looks handwritten.
@@ -52,14 +53,15 @@ thread halfway. The app catches the first case and writes the line again; the
 second is the model itself and stays until someone retrains it. If a line looks
 wrong, press Write again.
 
-Style 2 of the original is not here. Asked to write the same sentence eight
-times it produced garbage eight times, always losing the thread near the end -
-which is not bad luck but a fault of the model, reported upstream as
+Two hands were dropped for being broken rather than merely quirky. Style 2 of
+the original, asked to write the same sentence eight times, produced garbage
+eight times, always losing the thread near the end - not bad luck but a fault of
+the model, reported upstream as
 [issue 66](https://github.com/sjvasquez/handwriting-synthesis/issues/66) and
-reproducible on the author's own web demo. The numbering keeps its gap so every
-other style still answers to the number it has always had. Style 13 cannot
-write a capital T - its priming sample never shows one - which its preview line
-makes plain.
+reproducible on the author's own web demo. Style 13, contributed by a fork,
+could not form a capital T in any of thirteen attempts, because its priming
+sample never shows one. The numbering keeps both gaps, so every remaining style
+still answers to the number it has always had.
 
 ![](docs/styles.png)
 
@@ -86,12 +88,23 @@ long it dwells per character, how often the pen leaves the paper, how curly it
 is, and its slant), seeded with the styles already in the app so the new ones
 differ from those too. Of 240 candidates, 100 wrote cleanly and 12 were kept.
 
-**Style 13** came from
-[jonathanmaxberman's fork](https://github.com/jonathanmaxberman/handwriting-synthesis)
-(MIT), the only one of the 609 forks of the original to contribute a new style.
-It is a large, round, printed hand. Its licence file carries a third party's
-copyright line, so treat its provenance as best-effort: it is someone's
-handwriting sample, published under MIT, reproduced here with credit.
+The one new style contributed by any of the 609 forks of the original, from
+[jonathanmaxberman's](https://github.com/jonathanmaxberman/handwriting-synthesis),
+was tried here as style 13 and dropped again: a large round printed hand, but
+one that cannot write a capital T.
+
+Each style has a name, in `styles/names.json`, given by looking at what it
+writes. The numbers stay too, since the readme and the corpus both speak in
+them:
+
+| | | | |
+|---|---|---|---|
+| 0 Notebook | 1 Everyday | 3 Rounded | 4 Hurried |
+| 5 Tidy | 6 Airy | 7 Casual | 8 Generous |
+| 9 Compact | 10 Schoolbook | 11 Flowing | 12 Plain |
+| 14 Fine | 15 Breezy | 16 Copperplate | 17 Friendly |
+| 18 Block | 19 Brisk | 20 Spidery | 21 Sweeping |
+| 22 Steady | 23 Italic | 24 Open | 25 Careful |
 
 Every style here is IAM-OnDB material, the same as the original thirteen. The
 corpus is free for non-commercial research, and its keepers ask that users

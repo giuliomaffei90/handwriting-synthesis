@@ -24,13 +24,14 @@ final class Composer: ObservableObject {
     private var job: Task<Void, Never>?
 
     var isWriting: Bool { job != nil }
-    var styleIDs: [Int] { generator?.styles.all.map(\.id) ?? [] }
+    var styles: [Styles.Style] { generator?.styles.all ?? [] }
     var inkColour: NSColor { NSColor(ink) }
 
     func load() {
         do {
             generator = try Generator()
-            if let first = styleIDs.first, !styleIDs.contains(styleID) { styleID = first }
+            let ids = styles.map(\.id)
+            if let first = ids.first, !ids.contains(styleID) { styleID = first }
             showSample()
         } catch {
             failure = "The model could not be loaded: \(error)"

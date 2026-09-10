@@ -9,6 +9,7 @@ implementation, one timestep at a time:
 Weights come from hw/weights.npz (see tools/tf_export.py). Verified against
 the original graph by tests/test_engine.py.
 """
+import json
 import os
 import sys
 from collections import namedtuple
@@ -57,6 +58,19 @@ def softplus(x):
 def softmax(x):
     e = np.exp(x - x.max(axis=-1, keepdims=True))
     return e / e.sum(axis=-1, keepdims=True)
+
+
+def style_names():
+    """Human names for the styles, from styles/names.json."""
+    path = os.path.join(STYLES_DIR, 'names.json')
+    if not os.path.exists(path):
+        return {}
+    with open(path) as handle:
+        return {int(k): v for k, v in json.load(handle).items()}
+
+
+def style_name(style):
+    return style_names().get(style, 'Style {}'.format(style))
 
 
 def style_text(style):

@@ -6,6 +6,8 @@ struct Styles {
 
     struct Style {
         var id: Int
+        /// What the hand is called in the picker.
+        var name: String
         var text: String
         var strokes: [SIMD3<Float>]
         /// The same sentence written in this hand, generated ahead of time so
@@ -37,7 +39,8 @@ struct Styles {
             guard !strokes.isEmpty else { continue }
             let preview = points("style\(id).preview")
             // fall back to the priming sample if the app was built without previews
-            all.append(Style(id: id, text: text, strokes: strokes,
+            all.append(Style(id: id, name: container.strings["style\(id).name"] ?? "Style \(id)",
+                             text: text, strokes: strokes,
                              preview: preview.isEmpty ? strokes : preview))
         }
     }
