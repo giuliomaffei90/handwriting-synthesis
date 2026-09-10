@@ -27,7 +27,7 @@ Apple Silicon, macOS 13 or later.
 
 - **Type** anything. Lines longer than 75 characters wrap on word boundaries,
   blank lines become blank lines.
-- **Style** picks one of 14 real handwriting samples that prime the network.
+- **Style** picks one of 26 real handwriting samples that prime the network.
   The strip under the controls shows the actual sample.
 - **Neatness** steadies the hand. It is the network's sampling bias: at 0.3 the
   writing wanders and scrawls, at 2.0 it writes carefully. The default, 1.0, is
@@ -62,24 +62,41 @@ just shown.
 The thirteen that ship with the original are nothing special: they are lines
 0, 5, 8, 12, 19, 26, 28, 32, 37, 42, 44, 46 and 51 of the preprocessed IAM
 On-Line Handwriting Database, the corpus the model was trained on - roughly
-10,000 lines written by 221 people, each labelled with who wrote it. Anyone
-with that corpus can pull out as many more as they like, and pick the ones
-that behave. `prepare_data.py` needs only numpy to build it, no TensorFlow.
+10,000 lines written by 221 people. So any other line of that corpus is a
+style too, which is what `tools/extract_styles.py` is for.
 
-**Style 13** was added here from
+**Styles 14 to 25** were mined that way. Picking lines at random does not work:
+about four in ten send the model off the rails, and many of the rest are
+indistinguishable from each other. So every candidate is screened by actually
+writing with it - two sentences, four seeds each, all of which must finish
+inside the step budget - and the survivors are then chosen by greedy
+farthest-point selection over five measurements of the hand (its height, how
+long it dwells per character, how often the pen leaves the paper, how curly it
+is, and its slant), seeded with the styles already in the app so the new ones
+differ from those too. Of 240 candidates, 100 wrote cleanly and 12 were kept.
+
+**Style 13** came from
 [jonathanmaxberman's fork](https://github.com/jonathanmaxberman/handwriting-synthesis)
-(MIT), the only one of the 609 forks of the original to contribute a new one.
-It is a large, round, printed hand unlike anything in the original thirteen.
-Its licence file carries a third party's copyright line, so treat its
-provenance as best-effort: it is someone's handwriting sample, published under
-MIT, reproduced here with credit.
+(MIT), the only one of the 609 forks of the original to contribute a new style.
+It is a large, round, printed hand. Its licence file carries a third party's
+copyright line, so treat its provenance as best-effort: it is someone's
+handwriting sample, published under MIT, reproduced here with credit.
 
-To add your own, the recipe - independently arrived at by three people in the
-upstream issues - is: record the pen positions, flip the y axis, then
-`align`, `denoise`, `coords_to_offsets` and `normalize` from `drawing.py`, cut
-to 1200 points, and save the offsets next to the text you wrote. Be warned
-that priming steers the model rather than cloning your hand: it picks up size,
-slant and roundness, not your letterforms.
+Every style here is IAM-OnDB material, the same as the original thirteen. The
+corpus is free for non-commercial research, and its keepers ask that users
+register - which is where to get it:
+[fki.tic.heia-fr.ch](https://fki.tic.heia-fr.ch/databases/iam-on-line-handwriting-database).
+`prepare_data.py` builds the same arrays from the raw download with numpy
+alone, no TensorFlow; `tools/extract_styles.py` reads either those or the
+`strokes-py3.npy` / `sentences.txt` pair that circulates in course
+repositories, which is the same corpus already converted to stroke offsets.
+
+To add your own handwriting instead, the recipe - independently arrived at by
+three people in the upstream issues - is: record the pen positions, flip the y
+axis, then `align`, `denoise`, `coords_to_offsets` and `normalize` from
+`drawing.py`, cut to 1200 points, and save the offsets next to the text you
+wrote. Be warned that priming steers the model rather than cloning your hand:
+it picks up size, slant and roundness, not your letterforms.
 
 ## How it runs without TensorFlow
 
