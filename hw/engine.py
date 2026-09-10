@@ -11,6 +11,7 @@ the original graph by tests/test_engine.py.
 """
 import os
 import sys
+from collections import namedtuple
 
 import numpy as np
 
@@ -29,6 +30,20 @@ WEIGHTS_PATH = os.path.join(resource_root(), 'hw', 'weights.npz')
 STYLES_DIR = os.path.join(resource_root(), 'styles')
 
 STATE_FIELDS = ('h1', 'c1', 'h2', 'c2', 'h3', 'c3', 'alpha', 'beta', 'kappa', 'w', 'phi')
+
+# how far the attention must move for the pen to count as still making progress
+STALL_PROGRESS = 0.5
+
+# Each style writes at its own pace, which its priming sample measures: style 12
+# spends 19 timesteps on a character, style 8 spends 42. Over 100 lines that
+# came out right, none needed more than 1.39 times that pace, while lines where
+# the model got stuck rewriting a word ran to 2.2, 3.8 and beyond - so a budget
+# just past the healthy worst case separates them. Cutting a good line short
+# only costs another attempt; letting a stuck one through costs gibberish.
+STEP_BUDGET = 1.45
+DEFAULT_SPEED = 30.0   # timesteps per character, when writing without a style
+
+Run = namedtuple('Run', 'samples finished last_progress read_at')
 
 
 def sigmoid(x):
@@ -186,7 +201,14 @@ class Model(object):
         return self.mdn_params(outputs), state
 
     def free_run(self, state, ctx, bias, max_steps, rng, first_input=None, progress=None):
-        """Feed the model's own samples back in until every line is done."""
+        """Feed the model's own samples back in until every line is done.
+
+        `finished` says which lines stopped because the attention ran off the
+        end of their text rather than because the step budget ran out;
+        `last_progress` is the step at which each line's reading position last
+        moved forward - where to cut a line stuck rewriting the same word - and
+        `read_at` is how far into the text it got.
+        """
         batch = state['h1'].shape[0]
         if first_input is None:
             # rnn.sample: the pen starts lifted at the origin
@@ -195,11 +217,21 @@ class Model(object):
             x = first_input
         finished = np.zeros(batch, dtype=bool)
         samples = np.zeros([batch, max_steps, 3], dtype=np.float32)
+        read_at = np.full(batch, -np.inf)
+        last_progress = np.zeros(batch, dtype=int)
 
         for t in range(max_steps):
             state = self.step(x, state, ctx)
             x = self.sample_point(state, bias, rng)
             samples[:, t] = np.where(finished[:, None], 0.0, x)
+
+            # which character the pen is reading, as the attention-weighted
+            # mean of the window centres
+            alpha, kappa = state['alpha'], state['kappa']
+            position = (alpha * kappa).sum(axis=1) / np.maximum(alpha.sum(axis=1), 1e-8)
+            moved_on = position > read_at + STALL_PROGRESS
+            read_at = np.where(moved_on, position, read_at)
+            last_progress = np.where(moved_on & ~finished, t, last_progress)
 
             # done when attention has passed the last character (and the pen
             # was just lifted), matching LSTMAttentionCell.termination_condition
@@ -213,12 +245,21 @@ class Model(object):
             if progress is not None and t % 25 == 0:
                 progress((t + 1) / float(max_steps))
 
-        return samples
+        return Run(samples, finished, last_progress, read_at)
 
     # ------------------------------------------------------------------- api
 
-    def generate(self, lines, style=None, bias=0.75, seed=None, progress=None):
+    def generate(self, lines, style=None, bias=0.75, seed=None, progress=None, attempts=5):
         """Generate handwriting for a list of text lines.
+
+        A line is accepted when the attention runs past its last character
+        inside the step budget. Sometimes the model gets stuck part way and
+        rewrites the same word over and over, which reads as invented gibberish
+        at the end of the line; it may eventually escape and finish, but only
+        after writing several times the text it was given, so overrunning the
+        budget counts as failure too. Failed lines are written again from the
+        same primed state, and a line that never comes out right falls back to
+        the attempt that read furthest, cut to where its reading last moved on.
 
         Returns a list of [num_points, 3] offset arrays (dx, dy, pen_up), one
         per line; empty lines give an empty array.
@@ -246,19 +287,44 @@ class Model(object):
             x_p = np.tile(x_prime[None], (len(active), 1, 1))
             x_p_len = np.full([len(active)], len(x_prime), dtype=np.int32)
             _, state = self.teacher_force(x_p, x_p_len, c, c_len)
-            # rnn.primed_sample continues from the primed state, so the first
-            # input is sampled rather than the zero/pen-up vector
-            first_input = self.sample_point(state, biases, rng)
         else:
             state = self.zero_state(len(active), char_len)
-            first_input = None
 
-        max_steps = 40 * max(len(texts[i]) for i in active)
-        samples = self.free_run(state, ctx, biases, max_steps, rng,
+        speed = (len(x_prime) / float(len(style_text(style)))
+                 if style is not None else DEFAULT_SPEED)
+        max_steps = int(np.ceil(STEP_BUDGET * speed * max(len(texts[i]) for i in active)))
+
+        written = [None] * len(active)
+        read_best = np.full(len(active), -np.inf)
+        pending = np.arange(len(active))
+
+        for _attempt in range(max(1, attempts)):
+            rows = pending
+            sub_state = {k: v[rows] for k, v in state.items()}
+            sub_ctx = {'values': ctx['values'][rows], 'u': ctx['u'], 'c_len': ctx['c_len'][rows]}
+            sub_bias = biases[rows]
+            # rnn.primed_sample continues from the primed state, so the first
+            # input is sampled rather than the zero/pen-up vector
+            first_input = self.sample_point(sub_state, sub_bias, rng) if style is not None else None
+
+            run = self.free_run(sub_state, sub_ctx, sub_bias, max_steps, rng,
                                 first_input=first_input, progress=progress)
+
+            for i, row in enumerate(rows):
+                if run.finished[i]:
+                    sample = run.samples[i]
+                elif run.read_at[i] > read_best[row]:
+                    read_best[row] = run.read_at[i]
+                    sample = run.samples[i][:run.last_progress[i] + 1]
+                else:
+                    continue          # an earlier attempt got further
+                written[row] = sample[~np.all(sample == 0.0, axis=1)]
+
+            pending = rows[~run.finished]
+            if not len(pending):
+                break
 
         out = [np.zeros([0, 3], dtype=np.float32) for _ in texts]
         for i, line_idx in enumerate(active):
-            sample = samples[i]
-            out[line_idx] = sample[~np.all(sample == 0.0, axis=1)]
+            out[line_idx] = written[i]
         return out

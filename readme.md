@@ -39,6 +39,12 @@ Apple Silicon (M1 and later). No installation, no dependencies, works offline.
 The preview goes through the same renderer that writes the file, so what is on
 screen is what gets saved.
 
+Occasionally a line comes out with invented words tacked on the end. That is
+the model's own stop condition failing - see below - and the app now catches it
+and writes the line again, which costs a second. Style 2 is the one style that
+can still derail in the middle of a sentence; if a line looks wrong, press
+Write again or pick another style.
+
 The network only knows 73 characters. Accents are stripped (`è` becomes `e`),
 a few symbols are substituted (`&` becomes `and`), uppercase `Q X Z` were never
 in the training set and become lowercase. Anything left over is listed under the
@@ -65,6 +71,19 @@ into an app is not an option. So the model was moved off it entirely:
   enlarged - and stamps the pen as overlapping dots instead of drawing a thick
   polyline, because PIL's wide lines leave serrated edges at every vertex of a
   hand-drawn path. The PNG comes out indistinguishable from the SVG.
+
+The model decides it has finished a line when the pen happens to lift at the
+exact step its attention reaches the last character. Styles that rarely lift the
+pen never hit that coincidence: the attention gets stuck a few characters short
+and the model rewrites the last word until the step budget runs out, which is
+where the invented words come from. Two changes catch it. The budget is no
+longer a flat 40 timesteps per character but 1.45 times the pace of the chosen
+style, measured from its own priming sample - styles write at between 19 and 42
+timesteps per character, so the old fixed budget was generous for some and
+impossible for others. And a line that does not finish inside that budget is
+simply written again, up to five times, keeping the attempt that read furthest.
+Over a hundred healthy lines none needed more than 1.39 times their style's
+pace, while stuck ones ran to 2.2, 3.8 and beyond, so the two separate cleanly.
 
 **`tests/test_engine.py`** is what makes this trustworthy. It replays a
 deterministic trace captured from the original graph: after 738 recurrent steps

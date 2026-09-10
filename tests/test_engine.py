@@ -12,7 +12,8 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from hw import drawing  # noqa: E402
-from hw.engine import Model, STATE_FIELDS  # noqa: E402
+from hw.engine import (STEP_BUDGET, Model, STATE_FIELDS, style_strokes,  # noqa: E402
+                       style_text)
 
 REFERENCE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'reference.npz')
 
@@ -49,6 +50,24 @@ def test_savgol_matches_scipy():
     print('savgol matches scipy for n in (1, 2, 5, 7, 40)')
 
 
+def test_lines_do_not_ramble():
+    """A line must stop when its text is written, not carry on inventing words.
+
+    Some styles rarely lift the pen, so the model's own stop condition - which
+    needs a pen-up exactly as the attention reaches the last character - never
+    fires, and it loops over the last word until the step budget runs out.
+    Style 11 with this text did exactly that before the retry rule.
+    """
+    model = Model()
+    for style, text, seed in [(11, 'Everything is going to be alright.', 3),
+                              (9, 'the quick brown fox jumps over it', 3)]:
+        pace = len(style_strokes(style)) / float(len(style_text(style)))
+        budget = STEP_BUDGET * pace * len(text)
+        points = len(model.generate([text], style=style, bias=1.0, seed=seed)[0])
+        print('style {:>2}: {} points, budget {:.0f}'.format(style, points, budget))
+        assert points <= budget, 'style {} rambled past its budget'.format(style)
+
+
 def test_text_prep():
     text, dropped = drawing.sanitize('Perché Qui: 3 “test” – ok ')
     assert text == 'Perche qui: 3 "test" - ok', text
@@ -61,5 +80,6 @@ def test_text_prep():
 if __name__ == '__main__':
     test_matches_tensorflow()
     test_savgol_matches_scipy()
+    test_lines_do_not_ramble()
     test_text_prep()
     print('OK')
