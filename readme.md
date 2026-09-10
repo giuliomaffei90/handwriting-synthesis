@@ -27,8 +27,10 @@ Apple Silicon, macOS 13 or later.
 
 - **Type** anything. Lines longer than 75 characters wrap on word boundaries,
   blank lines become blank lines.
-- **Style** picks one of 26 real handwriting samples that prime the network.
-  The strip under the controls shows the actual sample.
+- **Style** picks one of 26 hands. The strip under the controls shows that hand
+  writing the same sentence as every other, so the styles can be compared -
+  generated ahead of time and shipped with the app, because writing it takes
+  about a second and nobody wants to wait while flipping through styles.
 - **Neatness** steadies the hand. It is the network's sampling bias: at 0.3 the
   writing wanders and scrawls, at 2.0 it writes carefully. The default, 1.0, is
   legible but still looks handwritten.

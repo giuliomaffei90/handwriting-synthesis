@@ -35,10 +35,10 @@ final class Composer: ObservableObject {
         }
     }
 
-    /// The real handwriting sample the chosen style primes the model with.
+    /// The same sentence, written in the chosen style.
     func showSample() {
         guard let style = generator?.styles[styleID] else { return }
-        samplePage = Drawing.page(of: [style.strokes], margin: 6)
+        samplePage = Drawing.page(of: [style.preview], margin: 6)
     }
 
     func write() {

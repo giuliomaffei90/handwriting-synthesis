@@ -52,12 +52,19 @@ def main():
     size = write(os.path.join(OUT, 'model.bin'), weights)
     print('model.bin   {:>5.1f} MB  {} tensors'.format(size / 1e6, len(weights)))
 
+    previews_path = os.path.join(ROOT, 'hw', 'previews.npz')
+    previews = np.load(previews_path) if os.path.exists(previews_path) else {}
+
     styles = []
     for s in engine.available_styles():
         styles.append(('style{}.text'.format(s), engine.style_text(s)))
         styles.append(('style{}.strokes'.format(s), engine.style_strokes(s)))
+        key = 'style{}'.format(s)
+        if key in previews:
+            styles.append((key + '.preview', previews[key]))
     size = write(os.path.join(OUT, 'styles.bin'), styles)
-    print('styles.bin  {:>5.1f} MB  {} styles'.format(size / 1e6, len(styles) // 2))
+    print('styles.bin  {:>5.1f} MB  {} styles'.format(
+        size / 1e6, len(engine.available_styles())))
 
     reference = os.path.join(ROOT, 'tests', 'reference.npz')
     with np.load(reference) as npz:

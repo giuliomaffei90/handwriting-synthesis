@@ -63,12 +63,13 @@ struct ContentView: View {
 
     /// The real handwriting the chosen style shows the model before it writes.
     private var sample: some View {
-        PageView(page: composer.samplePage, ink: .secondary, penWidth: 1.4, maximumZoom: 1)
-            .frame(height: 46)
+        PageView(page: composer.samplePage, ink: .secondary, penWidth: 2.8, maximumZoom: 1,
+                 padding: 4)
+            .frame(height: 66)
             .frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: 6).fill(.quaternary.opacity(0.35)))
             .overlay(alignment: .leading) {
-                Text("primed with")
+                Text("style")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .padding(.leading, 8)
@@ -133,11 +134,11 @@ struct PageView: View {
     let ink: Color
     let penWidth: Double
     let maximumZoom: Double
+    var padding: CGFloat = 8
 
     var body: some View {
         Canvas { context, size in
             guard let page, !page.isEmpty else { return }
-            let padding: CGFloat = 8
             let zoom = min((size.width - 2 * padding) / page.size.width,
                            (size.height - 2 * padding) / page.size.height,
                            maximumZoom)

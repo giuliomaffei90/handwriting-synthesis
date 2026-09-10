@@ -9,8 +9,14 @@ APP="dist/Handwriting.app"
 
 test -f hw/weights.npz || { echo "hw/weights.npz missing - run tools/tf_export.py first"; exit 1; }
 
-if [ ! -f swift/Resources/model.bin ] || [ hw/weights.npz -nt swift/Resources/model.bin ] \
-   || [ styles -nt swift/Resources/styles.bin ]; then
+needs_packing=false
+for source in hw/weights.npz hw/previews.npz styles; do
+  [ -e "$source" ] || continue
+  if [ ! -f swift/Resources/styles.bin ] || [ "$source" -nt swift/Resources/styles.bin ]; then
+    needs_packing=true
+  fi
+done
+if [ ! -f swift/Resources/model.bin ] || [ "$needs_packing" = true ]; then
   echo "==> Packing the model and styles for Swift..."
   if [ ! -x .venv/bin/python ]; then
     command -v uv >/dev/null || { echo "uv is not installed: brew install uv"; exit 1; }

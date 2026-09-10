@@ -71,7 +71,23 @@ enum SelfTest {
         }
 
         try checkText()
+        try checkStyles()
         print("SELFTEST OK")
+    }
+
+    /// Every style has to carry the sentence the picker shows, or a stale
+    /// resource file quietly puts the priming samples back.
+    private static func checkStyles() throws {
+        let container = try Container(contentsOf: Resources.url("styles"))
+        let styles = try Styles()
+        var missing: [Int] = []
+        for style in styles.all where container.tensors["style\(style.id).preview"] == nil {
+            missing.append(style.id)
+        }
+        guard missing.isEmpty else {
+            throw Failure.styles(missing)
+        }
+        print("styles: \(styles.all.count), each with its own preview line")
     }
 
     private static func checkText() throws {
@@ -90,12 +106,15 @@ enum SelfTest {
     enum Failure: Error, CustomStringConvertible {
         case diverged(parameters: Float, state: Float)
         case text(String)
+        case styles([Int])
 
         var description: String {
             switch self {
             case let .diverged(p, s):
                 return "diverged from TensorFlow: parameters \(p), state \(s)"
             case let .text(what): return "text preparation: \(what)"
+            case let .styles(ids):
+                return "styles \(ids) have no preview line - repack the resources"
             }
         }
     }
