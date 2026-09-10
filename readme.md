@@ -52,6 +52,35 @@ text box instead of being silently dropped.
 
 ![](docs/styles.png)
 
+## Where the styles come from
+
+A style is not a trained thing. There is one model, and a style is simply a
+line of real handwriting shown to it before it starts writing - two files, the
+pen movements and the text that was written. The model copies the hand it was
+just shown.
+
+The thirteen that ship with the original are nothing special: they are lines
+0, 5, 8, 12, 19, 26, 28, 32, 37, 42, 44, 46 and 51 of the preprocessed IAM
+On-Line Handwriting Database, the corpus the model was trained on - roughly
+10,000 lines written by 221 people, each labelled with who wrote it. Anyone
+with that corpus can pull out as many more as they like, and pick the ones
+that behave. `prepare_data.py` needs only numpy to build it, no TensorFlow.
+
+**Style 13** was added here from
+[jonathanmaxberman's fork](https://github.com/jonathanmaxberman/handwriting-synthesis)
+(MIT), the only one of the 609 forks of the original to contribute a new one.
+It is a large, round, printed hand unlike anything in the original thirteen.
+Its licence file carries a third party's copyright line, so treat its
+provenance as best-effort: it is someone's handwriting sample, published under
+MIT, reproduced here with credit.
+
+To add your own, the recipe - independently arrived at by three people in the
+upstream issues - is: record the pen positions, flip the y axis, then
+`align`, `denoise`, `coords_to_offsets` and `normalize` from `drawing.py`, cut
+to 1200 points, and save the offsets next to the text you wrote. Be warned
+that priming steers the model rather than cloning your hand: it picks up size,
+slant and roundness, not your letterforms.
+
 ## How it runs without TensorFlow
 
 The original needs TensorFlow 1.6, which has no Apple Silicon build - bundling it
