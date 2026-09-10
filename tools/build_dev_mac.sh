@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Personal dev helper: build a Release macOS build of Handwriting, drop it in
+# Personal dev helper: build a Release build of Handwriting, drop it in
 # ~/Downloads, kill any running instance, and relaunch the fresh build.
 set -euo pipefail
 
@@ -10,12 +10,7 @@ DEST_APP="$HOME/Downloads/$APP_NAME.app"
 
 cd "$PROJECT_DIR"
 
-if [ ! -x .venv/bin/pyinstaller ]; then
-  command -v uv >/dev/null || { echo "uv is not installed: brew install uv"; exit 1; }
-  echo "==> Creating .venv (numpy, pillow, pyinstaller)..."
-  uv venv --python 3.12 .venv
-  VIRTUAL_ENV=.venv uv pip install numpy pillow pyinstaller
-fi
+command -v swift >/dev/null || { echo "Xcode's Swift toolchain is missing: xcode-select --install"; exit 1; }
 
 echo "==> Closing running instances of $APP_NAME..."
 osascript -e "tell application \"$APP_NAME\" to quit" >/dev/null 2>&1 || true

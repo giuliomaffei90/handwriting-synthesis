@@ -13,3 +13,7 @@ dist/
 *.spec
 __pycache__/
 .DS_Store
+
+# swift build output and the resources it packs from hw/weights.npz
+swift/.build/
+swift/Resources/

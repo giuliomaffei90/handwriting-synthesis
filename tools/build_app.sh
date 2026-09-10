@@ -1,35 +1,61 @@
 #!/bin/bash
-# Build dist/Handwriting.app (Apple Silicon). Needs: uv, and once:
-#   uv venv --python 3.12 .venv && VIRTUAL_ENV=.venv uv pip install numpy pillow pyinstaller
+# Build dist/Handwriting.app - the native Swift app (Apple Silicon).
+# Needs Xcode's toolchain, and uv for the one Python step that packs the model.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${VERSION:-1.0.0}"
+VERSION="${VERSION:-2.0.0}"
+APP="dist/Handwriting.app"
 
 test -f hw/weights.npz || { echo "hw/weights.npz missing - run tools/tf_export.py first"; exit 1; }
 
-.venv/bin/pyinstaller --noconfirm --clean --windowed --name Handwriting \
-  --icon assets/AppIcon.icns \
-  --osx-bundle-identifier com.giuliomaffei.handwriting \
-  --add-data "hw/weights.npz:hw" \
-  --add-data "styles:styles" \
-  --exclude-module matplotlib --exclude-module scipy --exclude-module tensorflow \
-  --exclude-module pandas --exclude-module sklearn \
-  app.py
+if [ ! -f swift/Resources/model.bin ] || [ hw/weights.npz -nt swift/Resources/model.bin ] \
+   || [ styles -nt swift/Resources/styles.bin ]; then
+  echo "==> Packing the model and styles for Swift..."
+  if [ ! -x .venv/bin/python ]; then
+    command -v uv >/dev/null || { echo "uv is not installed: brew install uv"; exit 1; }
+    uv venv --python 3.12 .venv
+    VIRTUAL_ENV=.venv uv pip install numpy pillow
+  fi
+  .venv/bin/python tools/make_swift_resources.py
+fi
 
-PLIST=dist/Handwriting.app/Contents/Info.plist
-for key in CFBundleShortVersionString CFBundleVersion; do
-  plutil -replace "$key" -string "$VERSION" "$PLIST" 2>/dev/null ||
-    plutil -insert "$key" -string "$VERSION" "$PLIST"
-done
-plutil -replace LSMinimumSystemVersion -string "11.0" "$PLIST" 2>/dev/null ||
-  plutil -insert LSMinimumSystemVersion -string "11.0" "$PLIST"
+echo "==> Building the app..."
+swift build -c release --package-path swift
 
-# ad-hoc signature must come last: it seals the Info.plist above
-codesign --force --deep --sign - dist/Handwriting.app
+echo "==> Assembling $APP..."
+rm -rf "$APP"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp swift/.build/release/Handwriting "$APP/Contents/MacOS/Handwriting"
+cp swift/Resources/*.bin "$APP/Contents/Resources/"
+cp assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
-dist/Handwriting.app/Contents/MacOS/Handwriting --selftest
+cat > "$APP/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>Handwriting</string>
+  <key>CFBundleDisplayName</key><string>Handwriting</string>
+  <key>CFBundleExecutable</key><string>Handwriting</string>
+  <key>CFBundleIdentifier</key><string>com.giuliomaffei.handwriting</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>$VERSION</string>
+  <key>CFBundleVersion</key><string>$VERSION</string>
+  <key>LSMinimumSystemVersion</key><string>13.0</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.graphics-design</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSPrincipalClass</key><string>NSApplication</string>
+  <key>NSSupportsAutomaticTermination</key><true/>
+</dict>
+</plist>
+PLIST
 
-rm -rf dist/Handwriting
-du -sh dist/Handwriting.app
-echo "built dist/Handwriting.app"
+# ad-hoc signature: required for arm64 binaries to run at all
+codesign --force --deep --sign - "$APP"
+
+"$APP/Contents/MacOS/Handwriting" --selftest
+
+du -sh "$APP"
+echo "built $APP"

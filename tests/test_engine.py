@@ -69,9 +69,12 @@ def test_lines_do_not_ramble():
 
 
 def test_text_prep():
-    text, dropped = drawing.sanitize('Perché Qui: 3 “test” – ok ')
-    assert text == 'Perche qui: 3 "test" - ok', text
-    assert dropped == [' '], dropped
+    # a non-breaking space has an equivalent and is substituted; a paragraph
+    # separator does not, and is reported rather than vanishing silently
+    text, dropped = drawing.sanitize(
+        'Perch\u00e9 Qui: 3 \u201ctest\u201d \u2013 ok\u00a0\u2029')
+    assert text == 'Perche qui: 3 "test" - ok ', repr(text)
+    assert dropped == ['\u2029'], dropped
     assert all(len(line) <= 75 for line in drawing.wrap('word ' * 100))
     assert drawing.wrap('a\n\nb') == ['a', '', 'b']
     print('text preparation ok')
