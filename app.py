@@ -12,7 +12,7 @@ import threading
 import tkinter as tk
 from tkinter import colorchooser, filedialog, messagebox, ttk
 
-from PIL import Image, ImageDraw, ImageTk
+from PIL import ImageTk
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -21,7 +21,6 @@ from hw.engine import (STYLES_DIR, WEIGHTS_PATH, Model, available_styles,
                        style_strokes)  # noqa: E402
 
 PAPER = '#ffffff'
-CHECKER = '#eeeeec'
 DEFAULT_TEXT = "Everything is going to be alright."
 DEFAULT_BIAS = 1.0
 
@@ -145,17 +144,7 @@ class App(ttk.Frame):
 
     # ------------------------------------------------------------- drawing
 
-    def _checkerboard(self, size, box=9):
-        """Light chequer, so it is obvious the saved image has no background."""
-        image = Image.new('RGBA', size, PAPER)
-        draw = ImageDraw.Draw(image)
-        for row, y in enumerate(range(0, size[1], box)):
-            for x in range((row % 2) * box, size[0], 2 * box):
-                draw.rectangle([x, y, x + box - 1, y + box - 1], fill=CHECKER)
-        return image
-
-    def _paint(self, canvas, polylines, size, width, color, pad=8, max_zoom=1.0,
-               checkerboard=False):
+    def _paint(self, canvas, polylines, size, width, color, pad=8, max_zoom=1.0):
         """Draw through the same renderer that saves the file, so what you see
         on screen is what lands in the PNG."""
         canvas.delete('all')
@@ -167,12 +156,7 @@ class App(ttk.Frame):
         zoom = min(room_x / size[0], room_y / size[1], max_zoom)
 
         image = render.to_image(polylines, size, stroke_width=width, color=color,
-                               dpi_scale=zoom)
-        if checkerboard:
-            board = self._checkerboard(image.size)
-            board.alpha_composite(image)
-            image = board
-
+                               background=PAPER, dpi_scale=zoom)
         photo = ImageTk.PhotoImage(image)
         self.photos[canvas] = photo
         canvas.create_image(canvas.winfo_width() // 2, canvas.winfo_height() // 2,
@@ -187,7 +171,7 @@ class App(ttk.Frame):
         self.redraw_job = None
         # the renderer holds up when enlarged, so fill the canvas up to 2x
         self._paint(self.canvas, self.polylines, self.page_size,
-                    self.width.get(), self.color, max_zoom=2.0, checkerboard=True)
+                    self.width.get(), self.color, max_zoom=2.0)
 
     def _draw_style_preview(self):
         style = int(self.style_var.get())
