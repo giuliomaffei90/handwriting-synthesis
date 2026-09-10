@@ -15,6 +15,11 @@ final class Engine {
     static let stallProgress: Float = 0.5
     /// Timestep budget as a multiple of the chosen style's own writing pace.
     static let stepBudget: Float = 1.45
+    /// How far the reading may fall back before the line is written off. When
+    /// the model loses the thread it returns to characters it has already
+    /// written and what comes out of the pen from there on is gibberish. Lines
+    /// that came out right never fell back by more than 2.9 characters.
+    static let lostBacktrack: Float = 3
     /// Pace assumed when writing without a style, in timesteps per character.
     static let defaultPace: Float = 30
     static let attempts = 5
@@ -207,6 +212,7 @@ final class Engine {
         points.reserveCapacity(limit)
 
         var readAt = -Float.greatestFiniteMagnitude
+        var readMax = -Float.greatestFiniteMagnitude
         var lastProgress = 0
 
         for t in 0..<limit {
@@ -223,6 +229,13 @@ final class Engine {
             if position > readAt + Engine.stallProgress {
                 readAt = position
                 lastProgress = t
+            }
+            readMax = max(readMax, position)
+            // gone back to text it has already written, with more still to go
+            if position < readMax - Engine.lostBacktrack,
+               position < Float(context.length - 2) {
+                return Run(points: Array(points.prefix(lastProgress + 1)),
+                           finished: false, readAt: readAt)
             }
 
             var peak = 0

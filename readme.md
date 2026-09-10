@@ -50,16 +50,9 @@ a few symbols are substituted (`&` becomes `and`), uppercase `Q X Z` were never
 in the training set and become lowercase. Anything left over is listed under the
 text box instead of being silently dropped.
 
-Occasionally a line comes out with invented words on the end, or loses the
-thread halfway. The app catches the first case and writes the line again; the
-second is the model itself and stays until someone retrains it. If a line looks
-wrong, press Write again.
-
-Length is what decides it. A hand that writes 40 characters cleanly five times
-out of six manages 65 only once in six, and the looping cursives - Copperplate,
-Sweeping, Italic - are the first to go. On a full 75-character line expect to
-press Write twice now and then; break the text into shorter lines and it
-rarely comes up.
+Now and then a word still comes out wrong, usually the last one before a join.
+Press Write again. What used to happen - a line dissolving into invented letters
+part way through and never recovering - is dealt with below.
 
 Two hands were dropped for being broken rather than merely quirky. Style 2 of
 the original, asked to write the same sentence eight times, produced garbage
@@ -160,6 +153,25 @@ The sampling path was checked separately by running numpy and TensorFlow at a
 bias high enough to make sampling near-deterministic: same trajectory, identical
 pen-up flags on all 203 steps.
 
+### Writing in pieces
+
+The corpus the model learnt from is made of short lines: half of them are 29
+characters or fewer, only one in fifty reaches 45, and not one of the six
+thousand reaches 63. The 75-character limit in the original code is the width
+its training arrays were padded to, not a length the model can write. Ask for a
+line that long and it is being asked for something it has never seen, which is
+where the invented letters came from - they appeared part way through and ran to
+the end of the line.
+
+So a line is written in pieces of 38 characters, split on word boundaries, and
+the pieces are joined back together. Each is straightened on its own before
+being set down, which is what hides the joins: their baselines end up on one
+line rather than wandering apart, and the result reads as a single continuous
+line. Lines shorter than that are written exactly as before.
+
+Asked to write a 63-character sentence in all 24 hands, the model used to
+produce four lines of gibberish; written in pieces it produces none.
+
 ### Knowing when to stop
 
 The model decides it has finished a line when the pen happens to lift at the
@@ -171,7 +183,11 @@ flat 40 timesteps per character but 1.45 times the pace of the chosen style,
 measured from its own priming sample - styles write at between 19 and 42
 timesteps per character, so the old fixed budget was generous for some and
 impossible for others. And a line that does not finish inside that budget is
-written again, up to five times, keeping the attempt that read furthest. Over a
+written again, up to five times, keeping the attempt that read furthest. A piece
+is also written off when the reading falls back to characters already written,
+which is what losing the thread looks like from the inside: over lines judged by
+eye, the ones that came out right never fell back by more than 2.9 characters
+while the failures went to 5, 7 and 12. Over a
 hundred healthy lines none needed more than 1.39 times their style's pace, while
 stuck ones ran to 2.2, 3.8 and beyond, so the two separate cleanly.
 

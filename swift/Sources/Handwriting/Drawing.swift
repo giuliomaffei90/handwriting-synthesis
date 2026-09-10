@@ -25,8 +25,45 @@ enum Drawing {
         }
     }
 
+    /// Set the pieces of one line down side by side on a shared baseline.
+    ///
+    /// Straightening each piece on its own is what hides the joins: their
+    /// baselines end up on one line instead of wandering apart.
+    static func join(_ pieces: [[SIMD3<Float>]], gap: CGFloat = 11) -> [SIMD3<Float>] {
+        let pieces = pieces.filter { !$0.isEmpty }
+        guard pieces.count > 1 else { return pieces.first ?? [] }
+
+        var points: [CGPoint] = []
+        var lifts: [Bool] = []
+        var x: CGFloat = 0
+        for piece in pieces {
+            var here: [CGPoint] = []
+            var pen: CGFloat = 0, level: CGFloat = 0
+            for step in piece {
+                pen += CGFloat(step.x)
+                level += CGFloat(step.y)
+                here.append(CGPoint(x: pen, y: level))
+            }
+            here = aligned(here)
+            let shift = x - (here.map(\.x).min() ?? 0)
+            for (index, point) in here.enumerated() {
+                points.append(CGPoint(x: point.x + shift, y: point.y))
+                lifts.append(index == here.count - 1 ? true : piece[index].z == 1)
+            }
+            x = (here.map(\.x).max() ?? 0) + shift + gap
+        }
+
+        var offsets: [SIMD3<Float>] = [SIMD3(0, 0, 1)]
+        for index in 1..<points.count {
+            offsets.append(SIMD3(Float(points[index].x - points[index - 1].x),
+                                 Float(points[index].y - points[index - 1].y),
+                                 lifts[index] ? 1 : 0))
+        }
+        return offsets
+    }
+
     /// Corrects the global slant and offset of a hand.
-    private static func aligned(_ points: [CGPoint]) -> [CGPoint] {
+    static func aligned(_ points: [CGPoint]) -> [CGPoint] {
         let n = CGFloat(points.count)
         guard n > 1 else { return points }
         let sumX = points.reduce(0) { $0 + $1.x }

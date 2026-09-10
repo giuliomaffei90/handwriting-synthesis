@@ -130,6 +130,12 @@ def denoise(coords):
     return np.vstack(new_coords)
 
 
+def coords_to_offsets(coords):
+    """convert from coordinates to offsets"""
+    offsets = np.concatenate([coords[1:, :2] - coords[:-1, :2], coords[1:, 2:3]], axis=1)
+    return np.concatenate([np.array([[0.0, 0.0, 1.0]]), offsets], axis=0)
+
+
 def offsets_to_coords(offsets):
     """convert from offsets to coordinates"""
     return np.concatenate([np.cumsum(offsets[:, :2], axis=0), offsets[:, 2:3]], axis=1)

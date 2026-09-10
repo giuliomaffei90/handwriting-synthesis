@@ -35,6 +35,23 @@ STATE_FIELDS = ('h1', 'c1', 'h2', 'c2', 'h3', 'c3', 'alpha', 'beta', 'kappa', 'w
 # how far the attention must move for the pen to count as still making progress
 STALL_PROGRESS = 0.5
 
+# How far the reading may fall back before the line is written off. When the
+# model loses the thread it stops advancing through the text and returns to
+# characters it has already written, and what comes out of the pen from there on
+# is gibberish. Over lines judged by eye, the ones that came out right never
+# fell back by more than 2.9 characters while the good ones went to 5, 7 and 12,
+# so 3 catches three quarters of the failures and rejects none of the successes.
+LOST_BACKTRACK = 3.0
+
+# The corpus the model learnt from is made of short lines: half of them are 29
+# characters or fewer, only one in fifty reaches 45, and not one reaches 63. Ask
+# for a line longer than that and it is being asked for something it has never
+# seen, which is where most of the gibberish comes from. So a line is written in
+# pieces of this length, each straightened on its own and set down on the same
+# baseline as the last - which reads as one continuous line.
+PIECE_WIDTH = 38
+PIECE_GAP = 11.0        # model units between pieces, about a space wide
+
 # Each style writes at its own pace, which its priming sample measures: style 12
 # spends 19 timesteps on a character, style 8 spends 42. Over 100 lines that
 # came out right, none needed more than 1.39 times that pace, while lines where
@@ -218,7 +235,8 @@ class Model(object):
         """Feed the model's own samples back in until every line is done.
 
         `finished` says which lines stopped because the attention ran off the
-        end of their text rather than because the step budget ran out;
+        end of their text, rather than because the step budget ran out or
+        because the reading fell back and the line was written off;
         `last_progress` is the step at which each line's reading position last
         moved forward - where to cut a line stuck rewriting the same word - and
         `read_at` is how far into the text it got.
@@ -232,12 +250,14 @@ class Model(object):
         finished = np.zeros(batch, dtype=bool)
         samples = np.zeros([batch, max_steps, 3], dtype=np.float32)
         read_at = np.full(batch, -np.inf)
+        read_max = np.full(batch, -np.inf)
+        lost = np.zeros(batch, dtype=bool)
         last_progress = np.zeros(batch, dtype=int)
 
         for t in range(max_steps):
             state = self.step(x, state, ctx)
             x = self.sample_point(state, bias, rng)
-            samples[:, t] = np.where(finished[:, None], 0.0, x)
+            samples[:, t] = np.where((finished | lost)[:, None], 0.0, x)
 
             # which character the pen is reading, as the attention-weighted
             # mean of the window centres
@@ -247,13 +267,18 @@ class Model(object):
             read_at = np.where(moved_on, position, read_at)
             last_progress = np.where(moved_on & ~finished, t, last_progress)
 
+            # gone back to text it has already written, with more still to go
+            read_max = np.maximum(read_max, position)
+            lost |= ((position < read_max - LOST_BACKTRACK)
+                     & (position < ctx['c_len'] - 2) & ~finished)
+
             # done when attention has passed the last character (and the pen
             # was just lifted), matching LSTMAttentionCell.termination_condition
             char_idx = np.argmax(state['phi'], axis=1)
             past_end = char_idx >= ctx['c_len']
             at_end = (char_idx >= ctx['c_len'] - 1) & (x[:, 2] == 1.0)
-            finished |= past_end | at_end
-            if finished.all():
+            finished |= (past_end | at_end) & ~lost
+            if (finished | lost).all():
                 samples = samples[:, :t + 1]
                 break
             if progress is not None and t % 25 == 0:
@@ -263,54 +288,34 @@ class Model(object):
 
     # ------------------------------------------------------------------- api
 
-    def generate(self, lines, style=None, bias=0.75, seed=None, progress=None, attempts=5):
-        """Generate handwriting for a list of text lines.
-
-        A line is accepted when the attention runs past its last character
-        inside the step budget. Sometimes the model gets stuck part way and
-        rewrites the same word over and over, which reads as invented gibberish
-        at the end of the line; it may eventually escape and finish, but only
-        after writing several times the text it was given, so overrunning the
-        budget counts as failure too. Failed lines are written again from the
-        same primed state, and a line that never comes out right falls back to
-        the attempt that read furthest, cut to where its reading last moved on.
-
-        Returns a list of [num_points, 3] offset arrays (dx, dy, pen_up), one
-        per line; empty lines give an empty array.
-        """
-        rng = np.random.default_rng(seed)
-        texts = [line for line in lines]
-        active = [i for i, line in enumerate(texts) if line.strip()]
-        if not active:
-            return [np.zeros([0, 3], dtype=np.float32) for _ in texts]
-
+    def _write(self, texts, style, bias, rng, attempts, progress=None):
+        """Write one batch of short texts, retrying the ones that come out wrong."""
         prefix = style_text(style) + ' ' if style is not None else ''
-        encoded = [drawing.encode_ascii(prefix + texts[i]) for i in active]
+        encoded = [drawing.encode_ascii(prefix + t) for t in texts]
         char_len = max(len(e) for e in encoded)
-        c = np.zeros([len(active), char_len], dtype=np.int32)
-        c_len = np.zeros([len(active)], dtype=np.int32)
+        c = np.zeros([len(texts), char_len], dtype=np.int32)
+        c_len = np.zeros([len(texts)], dtype=np.int32)
         for i, enc in enumerate(encoded):
             c[i, :len(enc)] = enc
             c_len[i] = len(enc)
 
-        biases = np.full([len(active)], bias, dtype=np.float32)
+        biases = np.full([len(texts)], bias, dtype=np.float32)
         ctx = self.context(c, c_len)
 
         if style is not None:
             x_prime = style_strokes(style).astype(np.float32)
-            x_p = np.tile(x_prime[None], (len(active), 1, 1))
-            x_p_len = np.full([len(active)], len(x_prime), dtype=np.int32)
+            x_p = np.tile(x_prime[None], (len(texts), 1, 1))
+            x_p_len = np.full([len(texts)], len(x_prime), dtype=np.int32)
             _, state = self.teacher_force(x_p, x_p_len, c, c_len)
+            pace = len(x_prime) / float(len(style_text(style)))
         else:
-            state = self.zero_state(len(active), char_len)
+            state = self.zero_state(len(texts), char_len)
+            pace = DEFAULT_SPEED
 
-        speed = (len(x_prime) / float(len(style_text(style)))
-                 if style is not None else DEFAULT_SPEED)
-        max_steps = int(np.ceil(STEP_BUDGET * speed * max(len(texts[i]) for i in active)))
-
-        written = [None] * len(active)
-        read_best = np.full(len(active), -np.inf)
-        pending = np.arange(len(active))
+        max_steps = int(np.ceil(STEP_BUDGET * pace * max(len(t) for t in texts)))
+        written = [None] * len(texts)
+        read_best = np.full(len(texts), -np.inf)
+        pending = np.arange(len(texts))
 
         for _attempt in range(max(1, attempts)):
             rows = pending
@@ -337,8 +342,56 @@ class Model(object):
             pending = rows[~run.finished]
             if not len(pending):
                 break
+        return written
+
+    def _join(self, pieces, gap=PIECE_GAP):
+        """Set the pieces of one line down side by side on a shared baseline."""
+        pieces = [p for p in pieces if len(p)]
+        if not pieces:
+            return np.zeros([0, 3], dtype=np.float32)
+        if len(pieces) == 1:
+            return pieces[0]
+
+        placed, x = [], 0.0
+        for piece in pieces:
+            coords = drawing.offsets_to_coords(np.array(piece, dtype=np.float64))
+            # straightening each piece on its own is what hides the joins: their
+            # baselines end up on the same line instead of wandering apart
+            coords[:, :2] = drawing.align(coords[:, :2])
+            coords[:, 0] += x - coords[:, 0].min()
+            coords[-1, 2] = 1.0        # lift the pen before the next piece
+            placed.append(coords)
+            x = coords[:, 0].max() + gap
+
+        return drawing.coords_to_offsets(np.concatenate(placed)).astype(np.float32)
+
+    def generate(self, lines, style=None, bias=0.75, seed=None, progress=None, attempts=5):
+        """Generate handwriting for a list of text lines.
+
+        Each line is written in pieces no longer than the lines the model was
+        trained on and joined back together, and any piece that comes out wrong
+        is written again - see PIECE_WIDTH and the retry rules above.
+
+        Returns a list of [num_points, 3] offset arrays (dx, dy, pen_up), one
+        per line; empty lines give an empty array.
+        """
+        rng = np.random.default_rng(seed)
+        texts = list(lines)
+        active = [i for i, line in enumerate(texts) if line.strip()]
+        if not active:
+            return [np.zeros([0, 3], dtype=np.float32) for _ in texts]
+
+        # every piece of every line goes through the model together
+        pieces, owner = [], []
+        for index in active:
+            for piece in drawing.wrap(texts[index], PIECE_WIDTH):
+                if piece.strip():
+                    pieces.append(piece)
+                    owner.append(index)
+
+        written = self._write(pieces, style, bias, rng, attempts, progress=progress)
 
         out = [np.zeros([0, 3], dtype=np.float32) for _ in texts]
-        for i, line_idx in enumerate(active):
-            out[line_idx] = written[i]
+        for index in active:
+            out[index] = self._join([w for w, o in zip(written, owner) if o == index])
         return out
