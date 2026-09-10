@@ -27,6 +27,10 @@ Apple Silicon, macOS 13 or later.
 
 ## Using it
 
+The window is two pages side by side under a row of controls: what you type on
+the left, what it becomes on the right, written from the top of the sheet the
+way a letter would be.
+
 - **Type** anything. Lines longer than 75 characters wrap on word boundaries,
   blank lines become blank lines.
 - **Style** picks one of 24 named hands - Notebook, Copperplate, Spidery and so
@@ -35,8 +39,8 @@ Apple Silicon, macOS 13 or later.
   shipped with the app, because writing it takes about a second and nobody wants
   to wait while flipping through styles.
 - **Neatness** steadies the hand. It is the network's sampling bias: at 0.3 the
-  writing wanders and scrawls, at 2.0 it writes carefully. The default, 1.0, is
-  legible but still looks handwritten.
+  writing wanders and scrawls, at 2.0 it writes carefully. It starts at 1.8,
+  careful but still plainly handwritten.
 - **Pen** sets stroke width, and the well next to it sets the colour.
 - **Save PNG** or **Save SVG**. Both are saved with a transparent background, so
   handwriting drops straight onto a document, and the SVG scales forever and
