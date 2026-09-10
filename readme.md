@@ -27,7 +27,7 @@ Apple Silicon, macOS 13 or later.
 
 - **Type** anything. Lines longer than 75 characters wrap on word boundaries,
   blank lines become blank lines.
-- **Style** picks one of 26 hands. The strip under the controls shows that hand
+- **Style** picks one of 25 hands. The strip under the controls shows that hand
   writing the same sentence as every other, so the styles can be compared -
   generated ahead of time and shipped with the app, because writing it takes
   about a second and nobody wants to wait while flipping through styles.
@@ -49,8 +49,17 @@ text box instead of being silently dropped.
 
 Occasionally a line comes out with invented words on the end, or loses the
 thread halfway. The app catches the first case and writes the line again; the
-second is the model itself and stays until someone retrains it. Style 9 is the
-most reliable, style 2 the least. If a line looks wrong, press Write again.
+second is the model itself and stays until someone retrains it. If a line looks
+wrong, press Write again.
+
+Style 2 of the original is not here. Asked to write the same sentence eight
+times it produced garbage eight times, always losing the thread near the end -
+which is not bad luck but a fault of the model, reported upstream as
+[issue 66](https://github.com/sjvasquez/handwriting-synthesis/issues/66) and
+reproducible on the author's own web demo. The numbering keeps its gap so every
+other style still answers to the number it has always had. Style 13 cannot
+write a capital T - its priming sample never shows one - which its preview line
+makes plain.
 
 ![](docs/styles.png)
 

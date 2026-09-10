@@ -19,7 +19,9 @@ sys.path.insert(0, ROOT)
 from hw.engine import Model, available_styles, style_strokes, style_text  # noqa: E402
 
 SENTENCE = 'The quick brown fox jumps over the lazy dog'
-BIAS = 1.0
+# has to match the app's own default, or the picker advertises a neatness
+# nobody gets - see DEFAULT_BIAS in Composer.swift
+BIAS = 1.8
 SEED = 20260910
 TRIES = 6
 

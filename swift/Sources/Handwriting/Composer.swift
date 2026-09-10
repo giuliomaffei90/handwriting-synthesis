@@ -6,9 +6,11 @@ import UniformTypeIdentifiers
 @MainActor
 final class Composer: ObservableObject {
 
-    @Published var text = "Everything is going to be alright."
+    @Published var text = "Laugh, and the world laughs with you; weep, and you weep alone."
     @Published var styleID = 9
-    @Published var neatness = 1.0
+    /// tools/make_previews.py draws the picker's sample lines at this same
+    /// neatness, so a style advertises what it actually writes
+    @Published var neatness = 1.8
     @Published var penWidth = 2.0
     @Published var ink = Color.black
     @Published private(set) var page: Drawing.Page?

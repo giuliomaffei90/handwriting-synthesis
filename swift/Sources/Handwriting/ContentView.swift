@@ -63,7 +63,7 @@ struct ContentView: View {
 
     /// The real handwriting the chosen style shows the model before it writes.
     private var sample: some View {
-        PageView(page: composer.samplePage, ink: .secondary, penWidth: 2.8, maximumZoom: 1,
+        PageView(page: composer.samplePage, ink: .secondary, penWidth: 2.4, maximumZoom: 1,
                  padding: 4)
             .frame(height: 66)
             .frame(maxWidth: .infinity)
