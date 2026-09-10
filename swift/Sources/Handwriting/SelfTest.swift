@@ -91,13 +91,18 @@ enum SelfTest {
     }
 
     private static func checkText() throws {
-        // a non-breaking space has an equivalent and is substituted; a paragraph
-        // separator does not, and is reported rather than vanishing silently
+        // an accent becomes the letter and an apostrophe, the way it is typed on
+        // a machine without accents; other marks are simply flattened
         let (text, dropped) = Alphabet.sanitize(
             "Perch\u{e9} Qui: 3 \u{201C}test\u{201D} \u{2013} ok\u{00A0}\u{2029}")
-        guard text == "Perche qui: 3 \"test\" - ok " else { throw Failure.text("sanitize gave \(text)") }
+        guard text == "Perche' qui: 3 \"test\" - ok " else { throw Failure.text("sanitize gave \(text)") }
         guard dropped == ["\u{2029}"] else { throw Failure.text("dropped \(dropped)") }
-        guard Alphabet.wrap("a\n\nb") == ["a", "", "b"] else { throw Failure.text("wrap") }
+        guard Alphabet.sanitize("caff\u{e8} citt\u{e0} virt\u{f9}").text == "caffe' citta' virtu'"
+        else { throw Failure.text("accents") }
+        guard Alphabet.sanitize("\u{c8} vero").text == "E' vero" else { throw Failure.text("capital accent") }
+        guard Alphabet.sanitize("gar\u{e7}on ma\u{f1}ana f\u{fc}r").text == "garcon manana fur"
+        else { throw Failure.text("other marks") }
+        guard Alphabet.wrap("a\nb") == ["a", "b"] else { throw Failure.text("wrap") }
         guard Alphabet.wrap(String(repeating: "word ", count: 100)).allSatisfy({ $0.count <= 75 })
         else { throw Failure.text("wrap width") }
         print("text preparation ok")

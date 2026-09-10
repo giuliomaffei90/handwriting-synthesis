@@ -24,7 +24,15 @@ enum Alphabet {
 
     static let maximumLineLength = 75
 
+    /// Grave and acute, the accents an Italian keyboard actually types.
+    static let accents: Set<Unicode.Scalar> = ["\u{0300}", "\u{0301}"]
+
     /// Map text onto the alphabet, reporting whatever had to be dropped.
+    ///
+    /// An accented letter becomes the plain letter and an apostrophe, the way
+    /// it is typed on a machine that has no accents: e' for e-grave. Other
+    /// marks - cedillas, tildes, diaereses - are simply dropped, since an
+    /// apostrophe would be wrong there.
     static func sanitize(_ text: String) -> (text: String, dropped: [Character]) {
         var out = ""
         var dropped: Set<Character> = []
@@ -35,9 +43,24 @@ enum Alphabet {
             }
             var replacement = substitutions[character]
             if replacement == nil {
-                // strip accents: 'e' plus a combining acute becomes 'e'
-                let folded = String(character).folding(options: .diacriticInsensitive, locale: .init(identifier: "en_US"))
-                if !folded.isEmpty && folded.allSatisfy({ index[$0] != nil }) { replacement = folded }
+                let scalars = Array(String(character).decomposedStringWithCanonicalMapping
+                    .unicodeScalars)
+                let marks = scalars.filter { $0.properties.generalCategory == .nonspacingMark }
+                let base = String(String.UnicodeScalarView(
+                    scalars.filter { $0.properties.generalCategory != .nonspacingMark }))
+                if !base.isEmpty && base.allSatisfy({ index[$0] != nil }) {
+                    replacement = marks.contains(where: { accents.contains($0) })
+                        ? base + "'" : base
+                } else {
+                    // last resort for the likes of a ligature or a full-width digit
+                    let folded = String(character)
+                        .precomposedStringWithCompatibilityMapping
+                        .folding(options: .diacriticInsensitive,
+                                 locale: .init(identifier: "en_US"))
+                    if !folded.isEmpty && folded.allSatisfy({ index[$0] != nil }) {
+                        replacement = folded
+                    }
+                }
             }
             if let replacement, replacement.allSatisfy({ index[$0] != nil || $0 == "\n" }) {
                 out.append(contentsOf: replacement)

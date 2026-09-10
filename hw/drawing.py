@@ -39,8 +39,17 @@ def encode_ascii(ascii_string):
     return np.array([alpha_to_num[c] for c in ascii_string] + [0])
 
 
+# grave and acute, the accents an Italian keyboard actually types
+ACCENTS = {'\u0300', '\u0301'}
+
+
 def sanitize(text):
     """Map arbitrary text onto the model's 73 character alphabet.
+
+    An accented letter becomes the plain letter and an apostrophe, the way it
+    is typed on a machine that has no accents: e' for e-grave. Other marks -
+    cedillas, tildes, diaereses - are simply dropped, since an apostrophe would
+    be wrong there.
 
     Returns (clean_text, dropped) where `dropped` is the sorted set of
     characters that had no usable equivalent and were removed.
@@ -53,13 +62,17 @@ def sanitize(text):
             continue
         repl = SUBSTITUTIONS.get(char)
         if repl is None:
-            # strip accents: 'e' + combining acute -> 'e'
-            decomposed = unicodedata.normalize('NFKD', char)
-            repl = ''.join(c for c in decomposed if not unicodedata.combining(c))
-            if repl and all(c in valid for c in repl):
-                pass
+            decomposed = unicodedata.normalize('NFD', char)
+            base = ''.join(c for c in decomposed if not unicodedata.combining(c))
+            marks = {c for c in decomposed if unicodedata.combining(c)}
+            if base and all(c in valid for c in base):
+                repl = base + "'" if marks & ACCENTS else base
             else:
-                repl = None
+                # last resort for the likes of a ligature or a full-width digit
+                folded = unicodedata.normalize('NFKD', char)
+                repl = ''.join(c for c in folded if not unicodedata.combining(c))
+                if not repl or not all(c in valid for c in repl):
+                    repl = None
         if repl is None or not all(c in valid or c == '\n' for c in repl):
             dropped.add(char)
             continue

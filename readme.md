@@ -45,10 +45,13 @@ Apple Silicon, macOS 13 or later.
 The preview draws through the same code that writes the file, so what is on
 screen is what gets saved. A line takes about a second.
 
-The network only knows 73 characters. Accents are stripped (`è` becomes `e`),
-a few symbols are substituted (`&` becomes `and`), uppercase `Q X Z` were never
-in the training set and become lowercase. Anything left over is listed under the
-text box instead of being silently dropped.
+The network only knows 73 characters, and none of them are accented. An accent
+becomes the plain letter and an apostrophe, the way it is typed on a machine
+that has none: `è` is written `e'`, `città` becomes `citta'`. Other marks have
+no such convention and are simply flattened, so `garçon` is written `garcon`. A
+few symbols are substituted (`&` becomes `and`), and uppercase `Q X Z` were
+never in the training set so they become lowercase. Anything left over is
+listed under the text box instead of being silently dropped.
 
 Now and then a word still comes out wrong, usually the last one before a join.
 Press Write again. What used to happen - a line dissolving into invented letters

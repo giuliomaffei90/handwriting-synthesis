@@ -69,12 +69,14 @@ def test_lines_do_not_ramble():
 
 
 def test_text_prep():
-    # a non-breaking space has an equivalent and is substituted; a paragraph
-    # separator does not, and is reported rather than vanishing silently
-    text, dropped = drawing.sanitize(
-        'Perch\u00e9 Qui: 3 \u201ctest\u201d \u2013 ok\u00a0\u2029')
-    assert text == 'Perche qui: 3 "test" - ok ', repr(text)
+    # an accent becomes the letter and an apostrophe, the way it is typed on a
+    # machine without accents; other marks are simply flattened
+    text, dropped = drawing.sanitize('Perch\u00e9 Qui: 3 \u201ctest\u201d \u2013 ok\u00a0\u2029')
+    assert text == "Perche' qui: 3 \"test\" - ok ", repr(text)
     assert dropped == ['\u2029'], dropped
+    assert drawing.sanitize('caff\u00e8 citt\u00e0 virt\u00f9')[0] == "caffe' citta' virtu'"
+    assert drawing.sanitize('\u00c8 vero')[0] == "E' vero"
+    assert drawing.sanitize('gar\u00e7on ma\u00f1ana f\u00fcr')[0] == 'garcon manana fur'
     assert all(len(line) <= 75 for line in drawing.wrap('word ' * 100))
     assert drawing.wrap('a\n\nb') == ['a', '', 'b']
     print('text preparation ok')
