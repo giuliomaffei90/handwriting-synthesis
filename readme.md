@@ -53,6 +53,12 @@ thread halfway. The app catches the first case and writes the line again; the
 second is the model itself and stays until someone retrains it. If a line looks
 wrong, press Write again.
 
+Length is what decides it. A hand that writes 40 characters cleanly five times
+out of six manages 65 only once in six, and the looping cursives - Copperplate,
+Sweeping, Italic - are the first to go. On a full 75-character line expect to
+press Write twice now and then; break the text into shorter lines and it
+rarely comes up.
+
 Two hands were dropped for being broken rather than merely quirky. Style 2 of
 the original, asked to write the same sentence eight times, produced garbage
 eight times, always losing the thread near the end - not bad luck but a fault of

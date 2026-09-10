@@ -34,7 +34,15 @@ final class Composer: ObservableObject {
             if let first = ids.first, !ids.contains(styleID) { styleID = first }
             showSample()
         } catch {
-            failure = "The model could not be loaded: \(error)"
+            // the usual cause is the app being moved while it was open: the
+            // running copy keeps pointing at files Finder has taken away
+            failure = """
+                Handwriting could not load its model.
+
+                If you just moved the app while it was open, quit it and open \
+                it again from its new place. Otherwise this copy is incomplete \
+                - download it again.
+                """
         }
     }
 
