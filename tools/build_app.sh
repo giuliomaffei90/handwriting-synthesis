@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${VERSION:-2.0.0}"
+VERSION="${VERSION:-2.0.1}"
 APP="dist/Handwriting.app"
 
 test -f hw/weights.npz || { echo "hw/weights.npz missing - run tools/tf_export.py first"; exit 1; }
