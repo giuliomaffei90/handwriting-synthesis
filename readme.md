@@ -15,8 +15,10 @@ then onto Swift, so it fits in a double-clickable app.
 
 ## Download
 
-1. Get `Handwriting-macOS-arm64.zip` from [Releases](../../releases).
-2. Unzip and drag **Handwriting.app** into Applications.
+1. Get `Handwriting-<version>.dmg` from [Releases](../../releases).
+2. Open it and drag **Handwriting** across to **Applications** - before opening
+   it, since an app moved while it is running keeps pointing at files that are
+   no longer there.
 3. First launch only: the app is signed but not notarized by Apple, so macOS
    asks. Right-click the app and choose **Open**, or go to
    **System Settings → Privacy & Security** and press **Open Anyway**.
@@ -177,6 +179,7 @@ stuck ones ran to 2.2, 3.8 and beyond, so the two separate cleanly.
 
 ```bash
 ./tools/build_app.sh          # -> dist/Handwriting.app
+./tools/make_dmg.sh           # -> dist/Handwriting-<version>.dmg
 ```
 
 It needs Xcode's Swift toolchain, and [uv](https://docs.astral.sh/uv/) for the
