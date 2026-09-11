@@ -34,7 +34,12 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp swift/.build/release/Handwriting "$APP/Contents/MacOS/Handwriting"
 cp swift/Resources/*.bin "$APP/Contents/Resources/"
-cp assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+# the Liquid Glass icon: actool turns the Icon Composer document into the
+# renditions macOS draws (Assets.car) plus an .icns for older systems
+xcrun actool assets/AppIcon.icon --compile "$APP/Contents/Resources" \
+  --platform macosx --target-device mac --minimum-deployment-target 13.0 \
+  --app-icon AppIcon --output-partial-info-plist /dev/null \
+  --output-format human-readable-text >/dev/null
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -46,6 +51,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleExecutable</key><string>Handwriting</string>
   <key>CFBundleIdentifier</key><string>com.giuliomaffei.handwriting</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundleIconName</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundleVersion</key><string>$VERSION</string>
