@@ -231,7 +231,7 @@ from `checkpoints/` does - `uv pip install "tensorflow>=2.16"`, then
 `python tools/tf_export.py`. `tools/make_icon.py` builds the app icon by asking
 the model to write "Aa" - as an Icon Composer document, `assets/AppIcon.icon`,
 which macOS renders as Liquid Glass with its dark and tinted appearances. Open
-it in Icon Composer to adjust it; the build compiles it with `actool`. And and `tools/make_samples.py` builds the images above.
+it in Icon Composer to adjust it; the build compiles it with `actool`. `tools/make_samples.py` builds the images above.
 
 ## The original project
 
