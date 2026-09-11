@@ -1,84 +1,78 @@
 {
-  "fill-specializations": [
+  "fill-specializations" : [
     {
-      "value": {
-        "linear-gradient": [
+      "value" : {
+        "linear-gradient" : [
           "display-p3:0.99000,0.98400,0.96800,1.00000",
           "display-p3:0.90500,0.89500,0.87000,1.00000"
-        ],
-        "orientation": {
-          "start": {
-            "x": 0.5,
-            "y": 0
-          },
-          "stop": {
-            "x": 0.5,
-            "y": 1
-          }
-        }
+        ]
       }
     },
     {
-      "appearance": "dark",
-      "value": {
-        "linear-gradient": [
+      "appearance" : "dark",
+      "value" : {
+        "linear-gradient" : [
           "display-p3:0.23000,0.23000,0.25000,1.00000",
           "display-p3:0.09000,0.09000,0.10000,1.00000"
-        ],
-        "orientation": {
-          "start": {
-            "x": 0.5,
-            "y": 0
-          },
-          "stop": {
-            "x": 0.5,
-            "y": 1
-          }
-        }
+        ]
       }
     }
   ],
-  "groups": [
+  "groups" : [
     {
-      "layers": [
+      "layers" : [
         {
-          "fill-specializations": [
+          "blend-mode" : "normal",
+          "fill-specializations" : [
             {
-              "value": {
-                "automatic-gradient": "display-p3:0.10000,0.10500,0.13000,1.00000"
+              "value" : {
+                "automatic-gradient" : "display-p3:0.10000,0.10500,0.13000,1.00000"
               }
             },
             {
-              "appearance": "dark",
-              "value": {
-                "automatic-gradient": "display-p3:0.95000,0.94000,0.91000,1.00000"
+              "appearance" : "dark",
+              "value" : {
+                "automatic-gradient" : "display-p3:0.95000,0.94000,0.91000,1.00000"
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "automatic-gradient" : "display-p3:0.46969,0.49043,0.61338,1.00000"
               }
             }
           ],
-          "image-name": "handwriting.png",
-          "name": "handwriting"
+          "image-name" : "icon2.png",
+          "name" : "icon2",
+          "position" : {
+            "scale" : 1.2,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
         }
       ],
-      "lighting": "individual",
-      "position": {
-        "scale": 1,
-        "translation-in-points": [
+      "lighting" : "individual",
+      "position" : {
+        "scale" : 1,
+        "translation-in-points" : [
           0,
           0
         ]
       },
-      "shadow": {
-        "kind": "layer-color",
-        "opacity": 0.5
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 0.5
       },
-      "specular": true,
-      "translucency": {
-        "enabled": true,
-        "value": 0.2
+      "specular" : true,
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.2
       }
     }
   ],
-  "supported-platforms": {
-    "squares": "shared"
+  "supported-platforms" : {
+    "squares" : "shared"
   }
 }

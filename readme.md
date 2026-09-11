@@ -228,10 +228,12 @@ VIRTUAL_ENV=.venv uv pip install numpy pillow
 
 `hw/weights.npz` is committed, so none of this needs TensorFlow. Regenerating it
 from `checkpoints/` does - `uv pip install "tensorflow>=2.16"`, then
-`python tools/tf_export.py`. `tools/make_icon.py` builds the app icon by asking
-the model to write "Aa" - as an Icon Composer document, `assets/AppIcon.icon`,
-which macOS renders as Liquid Glass with its dark and tinted appearances. Open
-it in Icon Composer to adjust it; the build compiles it with `actool`. `tools/make_samples.py` builds the images above.
+`python tools/tf_export.py`. The app icon is an Icon Composer
+document, `assets/AppIcon.icon`, which macOS renders as Liquid Glass with its
+dark and tinted appearances; the build compiles it with `actool`. It began as
+the model's own "Aa", laid down by `tools/make_icon.py`, and has since been
+refined by hand in Icon Composer - which is where to edit it now. The tool
+refuses to overwrite the document unless given `--force`. `tools/make_samples.py` builds the images above.
 
 ## The original project
 

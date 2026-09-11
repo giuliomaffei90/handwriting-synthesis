@@ -3,10 +3,14 @@
 The icon is the model's own handwriting - "Aa", written by style 9 - laid out
 as an Icon Composer document: a paper-coloured background and one layer of ink
 that the system renders as Liquid Glass, with its specular highlights, its
-translucency and its dark, tinted and clear appearances. Open the result in
-Icon Composer to adjust it; tools/build_app.sh compiles it into the app.
+translucency and its dark, tinted and clear appearances. tools/build_app.sh
+compiles it into the app.
 
-Run: .venv/bin/python tools/make_icon.py
+The document has since been refined by hand in Icon Composer, which is now the
+place to edit it. This tool only lays down a fresh starting point, so it will
+not overwrite an existing document unless told to with --force.
+
+Run: .venv/bin/python tools/make_icon.py [--force]
 """
 import json
 import os
@@ -87,6 +91,9 @@ def document():
 
 def main():
     icon = os.path.join(ROOT, 'assets', 'AppIcon.icon')
+    if os.path.exists(icon) and '--force' not in sys.argv:
+        sys.exit('{} already exists and may hold edits made in Icon Composer - '
+                 'pass --force to replace it'.format(icon))
     shutil.rmtree(icon, ignore_errors=True)
     os.makedirs(os.path.join(icon, 'Assets'))
     ink_image().save(os.path.join(icon, 'Assets', 'handwriting.png'))
