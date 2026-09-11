@@ -1,7 +1,7 @@
 # Handwriting
 
 A native macOS app that writes what you type in a human hand, and saves it as
-PNG or SVG. No terminal, no Python, no TensorFlow - a 15 MB app that opens
+PNG or SVG. No terminal, no Python, no TensorFlow - a 17 MB app that opens
 instantly and works offline.
 
 <p align="center">
@@ -9,6 +9,11 @@ instantly and works offline.
     <source media="(prefers-color-scheme: dark)" srcset="docs/banner-dark.svg">
     <img alt="Handwriting Synthesis for macOS, written by the app" src="docs/banner-light.svg" width="760">
   </picture>
+</p>
+
+<p align="center">
+  <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/giuliomaffei90/handwriting-synthesis?label=release"></a>
+  <img alt="macOS 13 or later on Apple Silicon" src="https://img.shields.io/badge/macOS-13%2B%20%C2%B7%20Apple%20Silicon-lightgrey">
 </p>
 
 This is a fork of [sjvasquez/handwriting-synthesis](https://github.com/sjvasquez/handwriting-synthesis),
@@ -194,14 +199,16 @@ where invented words come from. Two changes catch it. The budget is no longer a
 flat 40 timesteps per character but 1.45 times the pace of the chosen style,
 measured from its own priming sample - styles write at between 19 and 42
 timesteps per character, so the old fixed budget was generous for some and
-impossible for others. And a line that does not finish inside that budget is
-written again, up to five times, keeping the attempt that read furthest. A piece
-is also written off when the reading falls back to characters already written,
-which is what losing the thread looks like from the inside: over lines judged by
-eye, the ones that came out right never fell back by more than 2.9 characters
-while the failures went to 5, 7 and 12. Over a
-hundred healthy lines none needed more than 1.39 times their style's pace, while
-stuck ones ran to 2.2, 3.8 and beyond, so the two separate cleanly.
+impossible for others. Over a hundred healthy lines none needed more than 1.39
+times their style's pace, while stuck ones ran to 2.2, 3.8 and beyond, so the
+two separate cleanly. And a line that does not finish inside that budget is
+written again, up to five times, keeping the attempt that read furthest.
+
+A piece is also written off when the reading falls back to characters it has
+already written, which is what losing the thread looks like from the inside.
+Over lines judged by eye, the ones that came out right never fell back by more
+than 2.9 characters while the failures went to 5, 7 and 12, so the limit is set
+at 3.
 
 ## Building it yourself
 
@@ -233,12 +240,14 @@ VIRTUAL_ENV=.venv uv pip install numpy pillow
 
 `hw/weights.npz` is committed, so none of this needs TensorFlow. Regenerating it
 from `checkpoints/` does - `uv pip install "tensorflow>=2.16"`, then
-`python tools/tf_export.py`. The app icon is an Icon Composer
-document, `assets/AppIcon.icon`, which macOS renders as Liquid Glass with its
-dark and tinted appearances; the build compiles it with `actool`. It began as
-the model's own "Aa", laid down by `tools/make_icon.py`, and has since been
-refined by hand in Icon Composer - which is where to edit it now. The tool
-refuses to overwrite the document unless given `--force`. `tools/make_samples.py` builds the images above.
+`python tools/tf_export.py`. The app icon is an Icon Composer document,
+`assets/AppIcon.icon`, which macOS 26 renders as Liquid Glass, with its dark and
+tinted appearances - earlier systems show it flat; the build compiles it with
+`actool`. It began as the model's own "Aa", laid down by `tools/make_icon.py`,
+and has since been refined by hand in Icon Composer - which is where to edit it
+now. The tool refuses to overwrite the document unless given `--force`.
+`tools/make_samples.py` builds the style sheet above; the banner at the top was
+written by the app itself.
 
 ## The original project
 
