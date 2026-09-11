@@ -4,7 +4,12 @@ A native macOS app that writes what you type in a human hand, and saves it as
 PNG or SVG. No terminal, no Python, no TensorFlow - a 15 MB app that opens
 instantly and works offline.
 
-![](docs/sample.png)
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/banner-dark.svg">
+    <img alt="Handwriting Synthesis for macOS, written by the app" src="docs/banner-light.svg" width="760">
+  </picture>
+</p>
 
 This is a fork of [sjvasquez/handwriting-synthesis](https://github.com/sjvasquez/handwriting-synthesis),
 an implementation of the handwriting synthesis experiments in

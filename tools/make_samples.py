@@ -9,22 +9,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from hw import render  # noqa: E402
-from hw.engine import Model, available_styles, style_name  # noqa: E402
+from hw.engine import available_styles, style_name  # noqa: E402
 
 DOCS = os.path.join(ROOT, 'docs')
 
 
 def main():
     os.makedirs(DOCS, exist_ok=True)
-    model = Model()
-
-    hero = model.generate(
-        ['Handwriting, generated on a Mac', 'by a neural network from 2013,',
-         'with no TensorFlow in sight.'],
-        style=9, bias=1.0, seed=20240607)
-    polylines, size = render.layout(hero)
-    render.to_image(polylines, size, stroke_width=1.9, dpi_scale=2.0).save(
-        os.path.join(DOCS, 'sample.png'))
 
     # the sheet shows exactly what the app's picker shows, so it reads the
     # preview lines rather than writing its own
@@ -43,7 +34,7 @@ def main():
         draw.text((24, y), '{:<2} {}'.format(style, style_name(style)), fill='#9a9a9a', font=font)
     labelled.convert('RGB').save(os.path.join(DOCS, 'styles.png'))
 
-    for name in ('sample.png', 'styles.png'):
+    for name in ('styles.png',):
         print(name, os.path.getsize(os.path.join(DOCS, name)) // 1024, 'KB')
 
 
